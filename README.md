@@ -35,11 +35,13 @@ Before setting up Text Reviser, ensure you have the following:
 1. **Locate the Markdown File**: Find the `.md` file containing the Text Reviser code block for the provider you prefer.
 2. **Copy the Entire Code Block**: Ensure you include the backticks and `dataviewjs` tag. It should look like this:
 
+   ```
    ```dataviewjs
    // Text Reviser script goes here
    ```
+   ```
 
-3. **Paste into Your Note**: Open the Obsidian note where you want to use Text Reviser and paste the entire code block.
+4. **Paste into Your Note**: Open the Obsidian note where you want to use Text Reviser and paste the entire code block.
 
 ## Configuration
 
