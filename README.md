@@ -39,7 +39,6 @@ Before setting up Text Reviser, ensure you have the following:
    ```dataviewjs
    // Text Reviser script goes here
    ```
-   ```
 
 4. **Paste into Your Note**: Open the Obsidian note where you want to use Text Reviser and paste the entire code block.
 
