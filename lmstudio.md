@@ -1,4 +1,3 @@
-# LM STUDIO
 ```dataviewjs
 // Define the local LM Studio server URL and the model you want to use
 const LM_STUDIO_URL = 'http://localhost:1234/v1/chat/completions'; // Adjust the port if necessary
