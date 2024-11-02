@@ -1,4 +1,3 @@
-# Open Router
 ```dataviewjs
 const OPENROUTER_API_KEY = "YOUR_API_KEY_HERE";
 
