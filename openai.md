@@ -1,4 +1,3 @@
-# Open AI
 ```dataviewjs
 // **OpenAI Revise Button**
 // **IMPORTANT:** Replace 'YOUR_OPENAI_API_KEY' with your actual OpenAI API key.
