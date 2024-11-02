@@ -12,6 +12,7 @@ Before setting up Text Reviser, ensure you have the following:
 - **Dataview Plugin**: Essential for running DataviewJS scripts.
 - **API Key (Supported AI Provider Account)**:
   - **OpenRouter**
+  - **OpenAI**
   - **Anthropic**
   - **Gemini**
   - **LM Studio** (Local Server)
