@@ -1,218 +1,190 @@
- Gemini
+ # Gemini
 ```dataviewjs
-const GEMINI_API_KEY = "YOUR_API_KEY_HERE";
+// **Gemini Revise Button**
+// **IMPORTANT:** Replace 'YOUR_GEMINI_API_KEY' with your actual Gemini API key.
+// **Never expose your API keys publicly.** If you've done so, revoke them immediately and generate new ones.
+
+const GEMINI_API_KEY = 'YOUR_GEMINI_API_KEY'; // Replace with your Gemini API key
 
 let currentNoteView = null; // Keep track of the current note view
+let reviseButton = null;
 
 // Function to initialize the revise button
 function initReviseButton() {
-    updateReviseButtonVisibility(); // Initial check
-
-    // Set up event listener for active leaf changes
-    app.workspace.on('active-leaf-change', updateReviseButtonVisibility);
+    document.addEventListener('selectionchange', handleSelectionChange);
+    window.addEventListener('scroll', handleScroll);
 }
 
-// Function to check if the note contains the DataviewJS block
-function noteContainsDataviewJS(noteView) {
-    const content = noteView.data;
-    return content.includes('```dataviewjs');
-}
+// Handle selection changes
+function handleSelectionChange() {
+    const selection = window.getSelection();
+    const selectedText = selection.toString().trim();
 
-// Function to create the revise button and attach it to the note container
-function createReviseButton(noteContainer, noteView) {
-    // Check if the button already exists in the note container
-    if (noteContainer.querySelector('#reviseButton')) {
-        return; // Button already exists, no need to add it again
+    if (selectedText.length > 0 && !reviseButton) {
+        showReviseButton(selection);
+    } else if (selectedText.length === 0 && reviseButton) {
+        hideReviseButton();
     }
+}
 
-    // Create the button
-    let reviseButton = document.createElement('button');
+// Handle window scroll to reposition the button if visible
+function handleScroll() {
+    if (reviseButton) {
+        const selection = window.getSelection();
+        if (selection.rangeCount > 0) {
+            repositionButton(selection);
+        }
+    }
+}
+
+// Function to create and display the revise button
+function showReviseButton(selection) {
+    // Create the button element
+    reviseButton = document.createElement('button');
     reviseButton.id = 'reviseButton';
-    reviseButton.classList.add('clickable-icon');
-    reviseButton.setAttribute('aria-label', 'Revise Selected Text');
-    reviseButton.style.position = 'absolute';
-    reviseButton.style.bottom = '20px';
-    reviseButton.style.left = '50%';
-    reviseButton.style.transform = 'translateX(-50%)';
-    reviseButton.style.zIndex = '1000';
-    reviseButton.style.width = '50px';
-    reviseButton.style.height = '50px';
-    reviseButton.style.borderRadius = '50%';
-    reviseButton.style.backgroundColor = getComputedStyle(document.body).getPropertyValue('--interactive-accent');
-    reviseButton.style.color = getComputedStyle(document.body).getPropertyValue('--text-on-accent');
-    reviseButton.style.display = 'flex';
-    reviseButton.style.justifyContent = 'center';
-    reviseButton.style.alignItems = 'center';
-    reviseButton.style.fontSize = '24px';
-    reviseButton.style.boxShadow = '0 4px 6px rgba(0, 0, 0, 0.1)';
-    reviseButton.style.cursor = 'pointer';
+    reviseButton.classList.add('revise-button');
 
-    // Add an icon to the button
+    // Add pencil icon (SVG)
     reviseButton.innerHTML = `
-        <svg viewBox="0 0 24 24" fill="currentColor" width="28" height="28">
-            <path d="M3 17.25V21h3.75L17.81,9.94L14.06,6.19L3,17.25zM20.71,7.04c0.39-0.39,0.39-1.03,0-1.42l-2.34-2.34c-0.39-0.39-1.03-0.39-1.42,0l-1.83,1.83l3.75,3.75L20.71,7.04z"/>
+        <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
+            <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c0.39-0.39 0.39-1.03 0-1.42l-2.34-2.34c-0.39-0.39-1.03-0.39-1.42 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/>
         </svg>
     `;
 
-    // Tooltip
-    reviseButton.title = 'Revise Selected Text';
+    // Style the button
+    reviseButton.style.position = 'absolute';
+    reviseButton.style.zIndex = '1000';
+    reviseButton.style.width = '32px';
+    reviseButton.style.height = '32px';
+    reviseButton.style.borderRadius = '50%';
+    reviseButton.style.display = 'flex';
+    reviseButton.style.justifyContent = 'center';
+    reviseButton.style.alignItems = 'center';
+    reviseButton.style.cursor = 'pointer';
+    reviseButton.style.backgroundColor = 'var(--interactive-accent)';
+    reviseButton.style.color = 'var(--text-on-accent)';
+    reviseButton.style.boxShadow = 'var(--overlay-shadow)';
+    reviseButton.style.border = 'none';
+    reviseButton.style.padding = '4px';
+    reviseButton.style.opacity = '0.9';
+    reviseButton.style.transition = 'opacity 0.3s';
 
-    // Event handler
-    const buttonClickHandler = async () => {
-        const editor = noteView.editor;
-        let selectedText = editor.getSelection();
-        if (!selectedText) {
-            // If no text is selected, use the entire note content
-            selectedText = editor.getValue();
-        }
-
-        const instructions = await openInstructionModal(selectedText);
-        if (instructions) {
-            await reviseText(selectedText, instructions);
-        }
+    // Hover effect
+    reviseButton.onmouseover = () => {
+        reviseButton.style.opacity = '1';
+    };
+    reviseButton.onmouseout = () => {
+        reviseButton.style.opacity = '0.9';
     };
 
-    reviseButton.addEventListener('click', buttonClickHandler);
+    // Append the button to the body
+    document.body.appendChild(reviseButton);
 
-    // Store the handler so we can remove it later
-    reviseButton.buttonClickHandler = buttonClickHandler;
+    // Position the button near the selected text
+    repositionButton(selection);
 
-    // Append the button to the note container
-    noteContainer.appendChild(reviseButton);
+    // Attach click event to the button
+    reviseButton.onclick = async () => {
+        const activeLeaf = dv.app.workspace.activeLeaf;
+        const activeView = activeLeaf?.view;
+        const editor = activeView?.editor;
 
-    // Store the button in the note view for later removal
-    noteView.reviseButton = reviseButton;
+        if (!editor) {
+            new Notice('📝 Revise: No active editor found.');
+            return;
+        }
+
+        let selectedText = editor.getSelection();
+        if (!selectedText) {
+            new Notice('📝 Revise: No text selected.');
+            return;
+        }
+
+        const instructions = await openInstructionModal();
+        if (instructions) {
+            await reviseText(selectedText, instructions, editor);
+        }
+    };
 }
 
-// Function to remove the revise button from the note container
-function removeReviseButton(noteView) {
-    if (noteView && noteView.reviseButton) {
-        let reviseButton = noteView.reviseButton;
-        reviseButton.removeEventListener('click', reviseButton.buttonClickHandler);
-        if (reviseButton.parentNode) {
-            reviseButton.parentNode.removeChild(reviseButton);
-        }
-        delete noteView.reviseButton;
+// Function to reposition the button near the selected text
+function repositionButton(selection) {
+    if (!reviseButton) return;
+
+    const range = selection.getRangeAt(0);
+    const rect = range.getBoundingClientRect();
+
+    // Calculate position: above and centered on the selection
+    const top = rect.top + window.scrollY - 40; // Adjust as needed
+    const left = rect.left + window.scrollX + (rect.width / 2) - (reviseButton.offsetWidth / 2);
+
+    reviseButton.style.top = `${top}px`;
+    reviseButton.style.left = `${left}px`;
+}
+
+// Function to hide and remove the revise button
+function hideReviseButton() {
+    if (reviseButton) {
+        reviseButton.remove();
+        reviseButton = null;
     }
 }
 
-// Function to update the revise button visibility based on the active note
-function updateReviseButtonVisibility() {
-    const activeLeaf = app.workspace.activeLeaf;
-
-    // Ensure we're in a markdown view
-    if (activeLeaf && activeLeaf.view.getViewType() === "markdown") {
-        const noteView = activeLeaf.view;
-        const noteContainer = noteView.containerEl;
-
-        // Remove the button from the previous note if the note has changed
-        if (
-            currentNoteView &&
-            currentNoteView.file &&
-            noteView.file &&
-            currentNoteView.file.path !== noteView.file.path
-        ) {
-            removeReviseButton(currentNoteView);
-        }
-
-        // Check if the current note contains the DataviewJS block
-        if (noteContainsDataviewJS(noteView)) {
-            // Create the revise button and attach it to the note container
-            createReviseButton(noteContainer, noteView);
-        } else {
-            // Remove the button if it exists in the current note
-            removeReviseButton(noteView);
-        }
-
-        // Update currentNoteView to the new noteView
-        currentNoteView = noteView;
-    } else {
-        // Not in markdown view, remove button if it exists
-        if (currentNoteView) {
-            removeReviseButton(currentNoteView);
-            currentNoteView = null;
-        }
-    }
-}
-
-// Function to open a custom modal to prompt for revision instructions and display results
-function openInstructionModal(selectedText, previousInstructions = '') {
+// Function to open a custom modal to prompt for revision instructions
+async function openInstructionModal() {
     return new Promise((resolve) => {
         // Create modal backdrop
         const modalBackdrop = document.createElement('div');
-        modalBackdrop.style.position = 'fixed';
-        modalBackdrop.style.top = '0';
-        modalBackdrop.style.left = '0';
-        modalBackdrop.style.width = '100%';
-        modalBackdrop.style.height = '100%';
-        modalBackdrop.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
-        modalBackdrop.style.zIndex = '1000';
+        modalBackdrop.className = 'custom-modal-overlay';
 
         // Create modal container
-        const modal = document.createElement('div');
-        modal.classList.add('modal', 'mod-obsidian'); // Use Obsidian's CSS classes
-        modal.style.position = 'fixed';
-        modal.style.top = '50%';
-        modal.style.left = '50%';
-        modal.style.transform = 'translate(-50%, -50%)';
-        modal.style.padding = '20px';
-        modal.style.borderRadius = '8px';
-        modal.style.zIndex = '1001';
-        modal.style.width = '60%';
-        modal.style.maxWidth = '600px';
-        modal.style.maxHeight = '80%';
-        modal.style.overflowY = 'auto';
-        modal.style.boxShadow = '0 4px 6px rgba(0, 0, 0, 0.1)';
+        const modalContainer = document.createElement('div');
+        modalContainer.className = 'custom-modal-container';
 
-        // Instruction label and input
+        // Modal header
+        const modalHeader = document.createElement('h2');
+        modalHeader.textContent = 'Revise Text';
+        modalContainer.appendChild(modalHeader);
+
+        // Instruction label
         const instructionLabel = document.createElement('label');
         instructionLabel.textContent = 'Enter revision instructions:';
-        instructionLabel.style.display = 'block';
-        instructionLabel.style.marginBottom = '10px';
+        modalContainer.appendChild(instructionLabel);
 
-        const instructionInput = document.createElement('textarea');
-        instructionInput.style.width = '100%';
-        instructionInput.style.height = '80px';
-        instructionInput.style.marginBottom = '15px';
-        instructionInput.style.padding = '5px';
-        instructionInput.classList.add('input');
-        instructionInput.setAttribute('aria-label', 'Revision Instructions');
-        instructionInput.value = previousInstructions;
+        // Instruction textarea
+        const instructionTextarea = document.createElement('textarea');
+        instructionTextarea.placeholder = 'Type your instructions here...';
+        instructionTextarea.rows = 4;
+        modalContainer.appendChild(instructionTextarea);
 
         // Action buttons
         const buttonContainer = document.createElement('div');
-        buttonContainer.style.textAlign = 'right';
+        buttonContainer.className = 'modal-button-container';
 
         const submitButton = document.createElement('button');
         submitButton.textContent = 'Submit';
-        submitButton.style.marginRight = '10px';
-        submitButton.classList.add('mod-cta');
+        submitButton.className = 'mod-cta';
 
         const cancelButton = document.createElement('button');
         cancelButton.textContent = 'Cancel';
-        cancelButton.classList.add('mod-warning');
+        cancelButton.className = 'mod-warning';
 
         buttonContainer.appendChild(submitButton);
         buttonContainer.appendChild(cancelButton);
-
-        // Append elements to modal
-        modal.appendChild(instructionLabel);
-        modal.appendChild(instructionInput);
-        modal.appendChild(buttonContainer);
+        modalContainer.appendChild(buttonContainer);
 
         // Append modal to backdrop
-        modalBackdrop.appendChild(modal);
+        modalBackdrop.appendChild(modalContainer);
         document.body.appendChild(modalBackdrop);
 
-        instructionInput.focus();
+        instructionTextarea.focus();
 
         // Event listeners
         const submitHandler = () => {
-            const instructions = instructionInput.value.trim();
+            const instructions = instructionTextarea.value.trim();
             if (instructions) {
-                // Show loading indicator
                 modalBackdrop.remove();
-                resolve({ instructions, selectedText });
+                resolve(instructions);
             } else {
                 new Notice('Please enter some instructions.');
             }
@@ -244,43 +216,16 @@ function openInstructionModal(selectedText, previousInstructions = '') {
 }
 
 // Function to revise text using Gemini API
-async function reviseText(text, instructionsObj) {
-    const { instructions, selectedText } = instructionsObj;
+async function reviseText(selectedText, instructions, editor) {
+    // Create the loading overlay
+    const loadingOverlay = document.createElement('div');
+    loadingOverlay.className = 'custom-modal-overlay';
 
-    // Create a modal to display the revised text
-    const modalBackdrop = document.createElement('div');
-    modalBackdrop.style.position = 'fixed';
-    modalBackdrop.style.top = '0';
-    modalBackdrop.style.left = '0';
-    modalBackdrop.style.width = '100%';
-    modalBackdrop.style.height = '100%';
-    modalBackdrop.style.backgroundColor = 'rgba(0, 0, 0, 0.5)';
-    modalBackdrop.style.zIndex = '1000';
-
-    const modal = document.createElement('div');
-    modal.classList.add('modal', 'mod-obsidian');
-    modal.style.position = 'fixed';
-    modal.style.top = '50%';
-    modal.style.left = '50%';
-    modal.style.transform = 'translate(-50%, -50%)';
-    modal.style.padding = '20px';
-    modal.style.borderRadius = '8px';
-    modal.style.zIndex = '1001';
-    modal.style.width = '60%';
-    modal.style.maxWidth = '600px';
-    modal.style.maxHeight = '80%';
-    modal.style.overflowY = 'auto';
-    modal.style.boxShadow = '0 4px 6px rgba(0, 0, 0, 0.1)';
-
-    // Loading indicator
-    const loadingIndicator = document.createElement('div');
-    loadingIndicator.textContent = 'Revising...';
-    loadingIndicator.style.marginBottom = '15px';
-    modal.appendChild(loadingIndicator);
-
-    // Append modal to backdrop
-    modalBackdrop.appendChild(modal);
-    document.body.appendChild(modalBackdrop);
+    const loadingContainer = document.createElement('div');
+    loadingContainer.className = 'custom-modal-container';
+    loadingContainer.textContent = 'Revising...';
+    loadingOverlay.appendChild(loadingContainer);
+    document.body.appendChild(loadingOverlay);
 
     try {
         const response = await fetch("https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent", {
@@ -292,10 +237,10 @@ async function reviseText(text, instructionsObj) {
             body: JSON.stringify({
                 "prompt": {
                     "context": "",
-                    "instructions": `Revise the following text based on these instructions: ${instructions}\n\nText:\n${text}`
+                    "instructions": `Revise the following text based on these instructions: ${instructions}\n\nText:\n${selectedText}`
                 },
                 "parameters": {
-                    "max_output_tokens": 1000, // Adjust as needed
+                    "max_output_tokens": 1000,
                     "temperature": 0.7
                 }
             })
@@ -303,178 +248,193 @@ async function reviseText(text, instructionsObj) {
 
         if (!response.ok) {
             const errorData = await response.json();
-            throw new Error(`Error ${response.status}: ${errorData.error.message || 'Unknown error'}`);
+            throw new Error(`Error ${response.status}: ${errorData.error?.message || 'Unknown error'}`);
         }
 
         const data = await response.json();
-        // Adjusting based on Gemini's response structure
-        const revisedText = data.candidates && data.candidates.length > 0 && data.candidates[0].output
-            ? data.candidates[0].output.trim()
-            : "No revised text received.";
+        const revisedText = data.candidates?.[0]?.output?.trim() || "No revised text received.";
 
         // Remove loading indicator
-        loadingIndicator.remove();
+        loadingOverlay.remove();
 
-        // Display revised text in textarea
-        const revisedLabel = document.createElement('label');
-        revisedLabel.textContent = 'Revised Text (you can edit it before copying or replacing):';
-        revisedLabel.style.display = 'block';
-        revisedLabel.style.marginBottom = '10px';
-
-        const revisedTextArea = document.createElement('textarea');
-        revisedTextArea.style.width = '100%';
-        revisedTextArea.style.height = '200px';
-        revisedTextArea.style.marginBottom = '15px';
-        revisedTextArea.style.padding = '5px';
-        revisedTextArea.classList.add('input');
-        revisedTextArea.value = revisedText;
-
-        const buttonContainer = document.createElement('div');
-        buttonContainer.style.textAlign = 'right';
-
-        const copyButton = document.createElement('button');
-        copyButton.textContent = 'Copy Revised Text';
-        copyButton.style.marginRight = '10px';
-        copyButton.classList.add('mod-cta');
-
-        const replaceButton = document.createElement('button');
-        replaceButton.textContent = 'Replace Text';
-        replaceButton.style.marginRight = '10px';
-        replaceButton.classList.add('mod-cta');
-
-        const reviseAgainButton = document.createElement('button');
-        reviseAgainButton.textContent = 'Revise Again';
-        reviseAgainButton.style.marginRight = '10px';
-        reviseAgainButton.classList.add('mod-cta');
-
-        const cancelButton = document.createElement('button');
-        cancelButton.textContent = 'Cancel';
-        cancelButton.classList.add('mod-warning');
-
-        buttonContainer.appendChild(copyButton);
-        buttonContainer.appendChild(replaceButton);
-        buttonContainer.appendChild(reviseAgainButton);
-        buttonContainer.appendChild(cancelButton);
-
-        modal.appendChild(revisedLabel);
-        modal.appendChild(revisedTextArea);
-        modal.appendChild(buttonContainer);
-
-        // Event handlers
-        const copyHandler = () => {
-            navigator.clipboard.writeText(revisedTextArea.value);
-            new Notice('Revised text copied to clipboard.');
-        };
-
-        const replaceHandler = () => {
-            const activeLeaf = app.workspace.activeLeaf;
-            if (activeLeaf && activeLeaf.view.getViewType() === 'markdown') {
-                const editor = activeLeaf.view.editor;
-                const selectedText = editor.getSelection();
-                if (selectedText) {
-                    editor.replaceSelection(revisedTextArea.value);
-                } else {
-                    // Replace entire note content if no text is selected
-                    editor.setValue(revisedTextArea.value);
-                }
-                new Notice('Text replaced.');
-                cleanup();
-            } else {
-                new Notice('No active markdown editor found.');
-            }
-        };
-
-        const reviseAgainHandler = async () => {
-            cleanup();
-            const instructions = await openInstructionModal(revisedTextArea.value, instructions);
-            if (instructions) {
-                await reviseText(revisedTextArea.value, instructions);
-            }
-        };
-
-        const cancelHandler = () => {
-            cleanup();
-        };
-
-        copyButton.addEventListener('click', copyHandler);
-        replaceButton.addEventListener('click', replaceHandler);
-        reviseAgainButton.addEventListener('click', reviseAgainHandler);
-        cancelButton.addEventListener('click', cancelHandler);
-
-        // Cleanup function to prevent memory leaks
-        function cleanup() {
-            copyButton.removeEventListener('click', copyHandler);
-            replaceButton.removeEventListener('click', replaceHandler);
-            reviseAgainButton.removeEventListener('click', reviseAgainHandler);
-            cancelButton.removeEventListener('click', cancelHandler);
-            modalBackdrop.remove();
-        }
-
-        // Close modal when clicking outside of it
-        modalBackdrop.addEventListener('click', (e) => {
-            if (e.target === modalBackdrop) {
-                cleanup();
-            }
-        });
+        // Open modal to display revised text
+        openRevisedTextModal(revisedText, editor);
     } catch (error) {
         console.error("Error calling Gemini API:", error);
         new Notice(`Error: ${error.message}`);
-        modalBackdrop.remove(); // Remove modal in case of error
+        loadingOverlay.remove(); // Remove modal in case of error
     }
 }
 
-// Function to display revised text (optional if using modals)
-function displayRevisedText(revisedText) {
-    const revisedContainer = dv.el('div', '');
+// Function to display the revised text in a custom modal
+function openRevisedTextModal(revisedText, editor) {
+    // Create the modal overlay
+    const modalOverlay = document.createElement('div');
+    modalOverlay.className = 'custom-modal-overlay';
 
-    const revisedParagraph = dv.el('p', revisedText);
-    revisedParagraph.style.marginBottom = '10px';
-    const copyButton = dv.el('button', 'Copy Revised Text');
-    const replaceButton = dv.el('button', 'Replace Selected Text');
-    const reviseAgainButton = dv.el('button', 'Revise Again');
+    // Create the modal container
+    const modalContainer = document.createElement('div');
+    modalContainer.className = 'custom-modal-container';
 
-    copyButton.style.marginRight = '10px';
-    replaceButton.style.marginRight = '10px';
+    // Modal header
+    const modalHeader = document.createElement('h2');
+    modalHeader.textContent = 'Revised Text';
+    modalContainer.appendChild(modalHeader);
 
-    copyButton.addEventListener('click', () => {
-        navigator.clipboard.writeText(revisedText);
-        alert("Revised text copied to clipboard.");
-    });
+    // Revised text label
+    const revisedTextLabel = document.createElement('label');
+    revisedTextLabel.textContent = 'Revised Text (you can edit it before copying or replacing):';
+    modalContainer.appendChild(revisedTextLabel);
 
-    replaceButton.addEventListener('click', () => {
-        const activeLeaf = app.workspace.activeLeaf;
-        if (activeLeaf && activeLeaf.view.getViewType() === "markdown") {
-            const editor = activeLeaf.view.editor;
-            const selectedText = editor.getSelection();
-            if (selectedText) {
-                editor.replaceSelection(revisedText);
-                alert("Selected text replaced.");
-            } else {
-                alert("No text selected to replace.");
-            }
+    // Revised text textarea
+    const revisedTextarea = document.createElement('textarea');
+    revisedTextarea.value = revisedText;
+    revisedTextarea.rows = 10;
+    modalContainer.appendChild(revisedTextarea);
+
+    // Action buttons
+    const buttonContainer = document.createElement('div');
+    buttonContainer.className = 'modal-button-container';
+
+    const copyButton = document.createElement('button');
+    copyButton.textContent = 'Copy to Clipboard';
+    copyButton.className = 'mod-cta';
+
+    const replaceButton = document.createElement('button');
+    replaceButton.textContent = 'Replace Selection';
+    replaceButton.className = 'mod-cta';
+
+    const reviseAgainButton = document.createElement('button');
+    reviseAgainButton.textContent = 'Revise Again';
+    reviseAgainButton.className = 'mod-cta';
+
+    const cancelButton = document.createElement('button');
+    cancelButton.textContent = 'Cancel';
+    cancelButton.className = 'mod-warning';
+
+    buttonContainer.appendChild(copyButton);
+    buttonContainer.appendChild(replaceButton);
+    buttonContainer.appendChild(reviseAgainButton);
+    buttonContainer.appendChild(cancelButton);
+    modalContainer.appendChild(buttonContainer);
+
+    // Append modal to overlay
+    modalOverlay.appendChild(modalContainer);
+    document.body.appendChild(modalOverlay);
+
+    // Event handlers
+    const copyHandler = () => {
+        navigator.clipboard.writeText(revisedTextarea.value);
+        new Notice('Revised text copied to clipboard.');
+    };
+
+    const replaceHandler = () => {
+        const selectedRange = editor.getSelectionRange();
+        if (selectedRange) {
+            editor.replaceSelection(revisedTextarea.value);
         } else {
-            alert("No active markdown editor found.");
+            // Replace entire note content if no text is selected
+            editor.setValue(revisedTextarea.value);
+        }
+        new Notice('Text replaced.');
+        cleanup();
+    };
+
+    const reviseAgainHandler = async () => {
+        cleanup();
+        const instructions = await openInstructionModal();
+        if (instructions) {
+            await reviseText(revisedTextarea.value, instructions, editor);
+        }
+    };
+
+    const cancelHandler = () => {
+        cleanup();
+    };
+
+    copyButton.addEventListener('click', copyHandler);
+    replaceButton.addEventListener('click', replaceHandler);
+    reviseAgainButton.addEventListener('click', reviseAgainHandler);
+    cancelButton.addEventListener('click', cancelHandler);
+
+    // Cleanup function to prevent memory leaks
+    function cleanup() {
+        copyButton.removeEventListener('click', copyHandler);
+        replaceButton.removeEventListener('click', replaceHandler);
+        reviseAgainButton.removeEventListener('click', reviseAgainHandler);
+        cancelButton.removeEventListener('click', cancelHandler);
+        modalOverlay.remove();
+    }
+
+    // Close modal when clicking outside of it
+    modalOverlay.addEventListener('click', (e) => {
+        if (e.target === modalOverlay) {
+            cleanup();
         }
     });
-
-    reviseAgainButton.addEventListener('click', () => {
-        openInstructionModal(revisedText);
-    });
-
-    revisedContainer.appendChild(revisedParagraph);
-    revisedContainer.appendChild(copyButton);
-    revisedContainer.appendChild(replaceButton);
-    revisedContainer.appendChild(reviseAgainButton);
-
-    const existingRevised = document.getElementById('revisedText');
-    if (existingRevised) {
-        existingRevised.replaceWith(revisedContainer);
-    } else {
-        dv.container.appendChild(revisedContainer);
-    }
-    revisedContainer.id = 'revisedText';
 }
 
 // Initialize the revise button when the script is loaded
 initReviseButton();
+
+// Add custom CSS for the modals
+const style = document.createElement('style');
+style.innerHTML = `
+.custom-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.75);
+    z-index: 1000;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.custom-modal-container {
+    background: var(--background-primary);
+    color: var(--text-normal);
+    padding: 20px;
+    border-radius: 8px;
+    max-width: 600px;
+    width: 100%;
+    box-shadow: var(--overlay-shadow);
+}
+
+.custom-modal-container h2 {
+    margin-top: 0;
+}
+
+.custom-modal-container textarea {
+    width: 100%;
+    box-sizing: border-box;
+    margin-bottom: 10px;
+}
+
+.modal-button-container {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+button.mod-cta {
+    background-color: var(--interactive-accent);
+    color: var(--text-on-accent);
+}
+
+button.mod-warning {
+    background-color: var(--warning);
+    color: var(--text-on-warning);
+}
+
+button {
+    padding: 8px 12px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+`;
+document.head.appendChild(style);
 ```
