@@ -1,4 +1,3 @@
-# Anthropic
 ```dataviewjs
 // **Anthropic Revise Button**
 // **IMPORTANT:** Replace 'YOUR_ANTHROPIC_API_KEY' with your actual Anthropic API key.
