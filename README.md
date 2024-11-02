@@ -87,10 +87,14 @@ Feel free to extend the script to include additional functionalities such as int
 1. **Open a Note**: Navigate to the note where you want to use Text Reviser.
 2. **Ensure DataviewJS Block is Present**: The script should be within a DataviewJS code block as described in the [Installation](#installation) section.
 
+>```dataviewjs
+>Code goes here!
+>```
+
 ### Revise Text
 
 1. **Select Text**: Highlight the text you wish to revise within the note. If no text is selected, the entire note's content will be used.
-2. **Click Revise Button**: A **Revise Selected Text** button (circular with a pencil icon) appears near the bottom of the note.
+2. **Click Revise Button**: A circular with a pencil icon appears above the highlighted portion.
 3. **Enter Instructions**:
    - A modal prompts you to input revision instructions (e.g., "Improve clarity", "Make it more concise").
 4. **Submit Instructions**: Click **Submit** to send the request to the AI.
