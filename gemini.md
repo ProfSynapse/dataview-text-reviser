@@ -1,4 +1,3 @@
- # Gemini
 ```dataviewjs
 // **Gemini Revise Button**
 // **IMPORTANT:** Replace 'YOUR_GEMINI_API_KEY' with your actual Gemini API key.
